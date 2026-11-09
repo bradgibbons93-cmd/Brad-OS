@@ -194,7 +194,7 @@ describe('family privacy boundary', () => {
     expect(JSON.stringify(today)).not.toContain('secretword');
     expect(JSON.stringify(today)).not.toContain('Private family plan');
     const zip = unzipSync(new Uint8Array((await t.call('GET', '/api/export')).data));
-    expect(Object.values(zip).map(strFromU8).join('\n')).not.toContain('secretword');
+    expect(Object.values(zip).map((u) => strFromU8(u)).join('\n')).not.toContain('secretword');
   });
 
   it('rejects writing into a family workspace from the work lens', async () => {
