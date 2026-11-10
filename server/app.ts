@@ -14,6 +14,8 @@ import { search } from './repo/search.ts';
 import { today } from './repo/today.ts';
 import { parseMarkdown, serializeMarkdown, safeFilename, titleFromBody } from './markdown.ts';
 import { removeSample } from './seed.ts';
+import { backlinks, related, graph } from './repo/graph.ts';
+import { mountMcp } from './mcp.ts';
 
 type Env = { Variables: { scope: Scope; sessionId: string; lensUntil: string | null } };
 
@@ -22,6 +24,7 @@ export interface AppOptions {
   password: string;
   sessionSecret: string;
   secureCookies?: boolean;
+  mcpToken?: string;
 }
 
 const optStr = z.string().max(500).nullable().optional();
@@ -111,6 +114,8 @@ export function createApp(opts: AppOptions) {
     }
     await next();
   });
+
+  mountMcp(app, db, opts.mcpToken);
 
   app.get('/api/health', (c) => c.json({ ok: true }));
 
@@ -205,6 +210,9 @@ export function createApp(opts: AppOptions) {
     else notes.trashNote(db, c.var.scope, c.req.param('id'));
     return c.json({ ok: true });
   });
+  app.get('/api/notes/:id/backlinks', (c) => c.json(backlinks(db, c.var.scope, c.req.param('id'))));
+  app.get('/api/notes/:id/related', (c) => c.json(related(db, c.var.scope, c.req.param('id'))));
+  app.get('/api/graph', (c) => c.json(graph(db, c.var.scope)));
   app.post('/api/notes/:id/restore', (c) => c.json(notes.restoreNote(db, c.var.scope, c.req.param('id'))));
   app.get('/api/notes/:id/export', (c) => {
     const n = notes.getNote(db, c.var.scope, c.req.param('id'));

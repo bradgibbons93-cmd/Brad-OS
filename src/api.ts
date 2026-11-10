@@ -180,6 +180,9 @@ export const api = {
   trashNote: (id: string) => request('DELETE', `/notes/${id}`),
   purgeNote: (id: string) => request('DELETE', `/notes/${id}?permanent=1`),
   restoreNote: (id: string) => request<NoteDetail>('POST', `/notes/${id}/restore`),
+  backlinks: (id: string) => request<NoteLite[]>('GET', `/notes/${id}/backlinks`),
+  related: (id: string) => request<(NoteLite & { reasons: string[] })[]>('GET', `/notes/${id}/related`),
+  graph: () => request<{ nodes: GraphNode[]; edges: GraphEdge[] }>('GET', '/graph'),
   resolveTitles: (titles: string[]) => request<Record<string, string>>('POST', '/notes/resolve', { titles }),
 
   projects: (f: { workspace?: string; status?: string } = {}) => request<Project[]>('GET', `/projects${qs(f)}`),
@@ -238,3 +241,7 @@ export interface TaskInput {
   priority: number;
   dueDate: string | null;
 }
+
+export interface NoteLite { id: string; title: string; kind: NoteKind; origin: Origin; workspace_id: string; workspace_name: string; workspace_color: string; updated_at: string }
+export interface GraphNode { id: string; type: 'note' | 'project' | 'workspace' | 'tag'; label: string; kind?: string; color: string; workspace_id?: string }
+export interface GraphEdge { source: string; target: string; type: 'link' | 'project' | 'workspace' | 'tag' }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Briefcase, CheckSquare, FolderKanban, Home, Inbox, Library, Lock, LogOut, Menu, Moon, Plus, Search, Settings, Sun, Unlock, Users,
+  Briefcase, CheckSquare, Network, FolderKanban, Home, Inbox, Library, Lock, LogOut, Menu, Moon, Plus, Search, Settings, Sun, Unlock, Users,
 } from 'lucide-react';
 import { api } from '../api';
 import { resetSpaceData, useInboxCount, useMe, useWorkspaces } from '../hooks';
@@ -82,7 +82,7 @@ export function Shell({ children }: { children: ReactNode }) {
       if (isTyping(e) || mod || e.altKey || document.querySelector('.overlay')) return;
       if (g) {
         g = false;
-        const map: Record<string, string> = { t: '/', i: '/inbox', k: '/knowledge', p: '/projects', a: '/tasks', s: '/settings' };
+        const map: Record<string, string> = { t: '/', i: '/inbox', k: '/knowledge', p: '/projects', a: '/tasks', r: '/graph', s: '/settings' };
         if (map[e.key]) (e.preventDefault(), nav(map[e.key]));
         return;
       }
@@ -145,6 +145,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <NavItem to="/knowledge" icon={Library} label="Knowledge" />
  <NavItem to="/projects" icon={FolderKanban} label="Projects" />
           <NavItem to="/tasks" icon={CheckSquare} label="Tasks" />
+          <NavItem to="/graph" icon={Network} label="Graph" />
           <NavItem to="/search" icon={Search} label="Search" />
         </div>
 

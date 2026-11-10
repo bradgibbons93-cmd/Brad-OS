@@ -332,6 +332,7 @@ function EditorInner({ note, defaults, editorKey }: { note: NoteDetail | null; d
           )}
           {mode !== 'write' && <Preview body={draft.body} workspaceId={draft.workspaceId} />}
         </div>
+        {noteId && !deleted && <Connections id={noteId} />}
       </div>
     </div>
   );
@@ -371,5 +372,37 @@ function Preview({ body, workspaceId }: { body: string; workspaceId: string }) {
 
   return (
     <div ref={ref} className="prose" onClick={onClick} dangerouslySetInnerHTML={{ __html: html || '<p style="color:var(--faint)">Nothing to preview yet.</p>' }} />
+  );
+}
+
+function Connections({ id }: { id: string }) {
+  const { data: back = [] } = useQuery({ queryKey: ['backlinks', id], queryFn: () => api.backlinks(id) });
+  const { data: rel = [] } = useQuery({ queryKey: ['related', id], queryFn: () => api.related(id) });
+  if (!back.length && !rel.length) return null;
+  return (
+    <div className="connections">
+      {back.length > 0 && (
+        <section>
+          <div className="eyebrow">Linked from · {back.length}</div>
+          {back.map((n) => (
+            <Link key={n.id} to={`/knowledge/${n.id}`} className="list-item">
+              <span className="ws-dot" style={{ background: n.workspace_color }} /> <span className="truncate">{n.title}</span>
+              <span className="meta">{timeAgo(n.updated_at)}</span>
+            </Link>
+          ))}
+        </section>
+      )}
+      {rel.length > 0 && (
+        <section>
+          <div className="eyebrow">Related</div>
+          {rel.map((n) => (
+            <Link key={n.id} to={`/knowledge/${n.id}`} className="list-item">
+              <span className="ws-dot" style={{ background: n.workspace_color }} /> <span className="truncate">{n.title}</span>
+              <span className="meta truncate" style={{ maxWidth: '45%' }}>{n.reasons.join(' · ')}</span>
+            </Link>
+          ))}
+        </section>
+      )}
+    </div>
   );
 }
