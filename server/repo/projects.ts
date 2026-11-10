@@ -18,6 +18,9 @@ export interface Project {
   status: ProjectStatus;
   next_action: string;
   due_date: string | null;
+  links: string;
+  people: string;
+  status_label: string;
   created_at: string;
   updated_at: string;
   open_tasks: number;
@@ -37,6 +40,9 @@ export interface Task {
   status: TaskStatus;
   priority: number;
   due_date: string | null;
+  links: string;
+  tool: string;
+  needs_me: number;
   created_at: string;
   completed_at: string | null;
 }
@@ -92,6 +98,9 @@ export interface ProjectInput {
   status?: ProjectStatus;
   nextAction?: string;
   dueDate?: string | null;
+  links?: { label: string; url: string }[];
+  people?: string[];
+  statusLabel?: string;
 }
 
 export function createProject(db: DB, scope: Scope, input: ProjectInput) {
@@ -103,8 +112,9 @@ export function createProject(db: DB, scope: Scope, input: ProjectInput) {
   tx(db, () => {
     run(
       db,
-      'INSERT INTO projects (id, workspace_id, title, summary, status, next_action, due_date) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO projects (id, workspace_id, title, summary, status, next_action, due_date, links, people, status_label) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       id, ws.id, title, input.summary ?? '', input.status ?? 'active', input.nextAction ?? '', input.dueDate ?? null,
+      JSON.stringify(input.links ?? []), JSON.stringify(input.people ?? []), input.statusLabel ?? '',
     );
     logActivity(db, scope, 'project', id, 'created', title);
   });
@@ -124,6 +134,10 @@ export function updateProject(db: DB, scope: Scope, id: string, input: ProjectIn
       ws, title, input.summary ?? p.summary, input.status ?? p.status,
       input.nextAction ?? p.next_action, input.dueDate !== undefined ? input.dueDate : p.due_date, now(), id,
     );
+    if (input.links || input.people || input.statusLabel !== undefined) {
+      run(db, 'UPDATE projects SET links = ?, people = ?, status_label = ? WHERE id = ?',
+        input.links ? JSON.stringify(input.links) : p.links, input.people ? JSON.stringify(input.people) : p.people, input.statusLabel ?? p.status_label, id);
+    }
     // Tasks follow their project (the guard allows this because the project already moved).
     if (ws !== p.workspace_id) run(db, 'UPDATE tasks SET workspace_id = ? WHERE project_id = ?', ws, id);
     if (input.status && input.status !== p.status) logActivity(db, scope, 'project', id, `status → ${input.status}`, title);
@@ -179,6 +193,9 @@ export interface TaskInput {
   status?: TaskStatus;
   priority?: number;
   dueDate?: string | null;
+  links?: { label: string; url: string }[];
+  tool?: string;
+  needsMe?: boolean;
 }
 
 export function createTask(db: DB, scope: Scope, input: TaskInput) {
@@ -196,8 +213,9 @@ export function createTask(db: DB, scope: Scope, input: TaskInput) {
   tx(db, () => {
     run(
       db,
-      'INSERT INTO tasks (id, workspace_id, project_id, title, details, status, priority, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO tasks (id, workspace_id, project_id, title, details, status, priority, due_date, links, tool, needs_me, completed_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       id, workspaceId, input.projectId ?? null, title, input.details ?? '', input.status ?? 'todo', input.priority ?? 0, input.dueDate ?? null,
+      JSON.stringify(input.links ?? []), input.tool ?? '', input.needsMe ? 1 : 0, input.status === 'done' ? now() : null,
     );
     logActivity(db, scope, 'task', id, 'created', title);
   });

@@ -126,8 +126,8 @@ export function Shell({ children }: { children: ReactNode }) {
       <div className={`rail-backdrop ${railOpen ? 'open' : ''}`} onClick={() => setRailOpen(false)} />
       <aside className={`rail ${railOpen ? 'open' : ''}`} aria-label="Main navigation">
         <div className="brand">
-          <div className="brand-mark" aria-hidden />
-          <div className="brand-word">BRAD<span>OS</span></div>
+          <svg className="brand-x" viewBox="0 0 24 24" aria-hidden><path d="M4 4 L20 20" stroke="#FFD400" strokeWidth="3.4" strokeLinecap="round" /><path d="M4 20 L22 2" stroke="#00E5FF" strokeWidth="3.4" strokeLinecap="round" /></svg>
+          <div className="brand-word">BRAD HQ<span>OS</span></div>
         </div>
 
         <div className="lens" role="group" aria-label="Space">

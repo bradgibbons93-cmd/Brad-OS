@@ -8,6 +8,7 @@ import * as projects from './repo/projects.ts';
 import * as inbox from './repo/inbox.ts';
 import { search } from './repo/search.ts';
 import { today } from './repo/today.ts';
+import { addWaiting, listWaiting } from './repo/money.ts';
 
 /**
  * A minimal MCP server (Streamable HTTP, JSON responses) so Poke, claude.ai custom connectors and
@@ -56,6 +57,23 @@ function tools(db: DB) {
       run: (a: Args) => search(db, SCOPE, str(a.query, 300) ?? '', { limit: 20 }).map((h) => ({
         type: h.type, id: h.id, title: h.title, workspace: h.workspace_name, snippet: h.snippet.replace(/[\u0002\u0003]/g, ''),
       })),
+    },
+    add_waiting: {
+      description: 'Add emails or messages that are waiting on Brad (the "Waiting on you" card). Safe to call repeatedly: items are matched by url, so re-runs update instead of duplicating. category: client | bill | official | family | other.',
+      inputSchema: {
+        type: 'object',
+        properties: { items: { type: 'array', items: { type: 'object', properties: {
+          category: { type: 'string' }, from: { type: 'string' }, subject: { type: 'string' }, why: { type: 'string', description: 'Why it needs Brad' },
+          next: { type: 'string', description: 'The next step' }, url: { type: 'string' }, date: { type: 'string', description: 'YYYY-MM-DD' }, source: { type: 'string', description: 'gmail | granola | beeper' },
+        }, required: ['subject'] } } },
+        required: ['items'],
+      },
+      run: (a: Args) => addWaiting(db, SCOPE, Array.isArray(a.items) ? (a.items as Record<string, string>[]) : []),
+    },
+    list_waiting: {
+      description: 'What is currently on the "Waiting on you" list.',
+      inputSchema: { type: 'object', properties: {} },
+      run: () => listWaiting(db, SCOPE).map((w) => ({ id: w.id, from: w.from_name, subject: w.subject, next: w.next, url: w.url })),
     },
     get_note: {
       description: 'Read one note in full (Markdown).',

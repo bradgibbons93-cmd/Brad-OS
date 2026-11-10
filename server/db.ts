@@ -257,12 +257,49 @@ CREATE TRIGGER IF NOT EXISTS si_capture_d AFTER DELETE ON captures BEGIN
 END;
 `;
 
+const EXTRA = `
+CREATE TABLE IF NOT EXISTS subscriptions (
+  id TEXT PRIMARY KEY,
+  boundary TEXT NOT NULL DEFAULT 'work' CHECK (boundary IN ('work','family')),
+  name TEXT NOT NULL, grp TEXT NOT NULL DEFAULT '', plan TEXT NOT NULL DEFAULT '',
+  amount REAL, cycle TEXT NOT NULL DEFAULT '', renews TEXT, status TEXT NOT NULL DEFAULT 'unknown',
+  suggest TEXT NOT NULL DEFAULT '', decision TEXT NOT NULL DEFAULT '', note TEXT NOT NULL DEFAULT '',
+  manage TEXT NOT NULL DEFAULT '', via TEXT NOT NULL DEFAULT '', evidence TEXT,
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE TABLE IF NOT EXISTS waiting (
+  id TEXT PRIMARY KEY,
+  boundary TEXT NOT NULL DEFAULT 'work' CHECK (boundary IN ('work','family')),
+  category TEXT NOT NULL DEFAULT 'other', from_name TEXT NOT NULL DEFAULT '', subject TEXT NOT NULL DEFAULT '',
+  why TEXT NOT NULL DEFAULT '', next TEXT NOT NULL DEFAULT '', url TEXT, date TEXT, source TEXT NOT NULL DEFAULT 'gmail',
+  status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','done')),
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+`;
+
+/** Additive column migrations for databases created by earlier versions. */
+const COLUMNS: [string, string, string][] = [
+  ['projects', 'links', "TEXT NOT NULL DEFAULT '[]'"],
+  ['projects', 'people', "TEXT NOT NULL DEFAULT '[]'"],
+  ['projects', 'status_label', "TEXT NOT NULL DEFAULT ''"],
+  ['projects', 'ext_id', 'TEXT'],
+  ['tasks', 'links', "TEXT NOT NULL DEFAULT '[]'"],
+  ['tasks', 'tool', "TEXT NOT NULL DEFAULT ''"],
+  ['tasks', 'needs_me', 'INTEGER NOT NULL DEFAULT 0'],
+  ['tasks', 'ext_id', 'TEXT'],
+];
+
 export function openDb(file: string): DB {
   if (file !== ':memory:') mkdirSync(dirname(file), { recursive: true });
   const db = new DatabaseSync(file);
   if (file !== ':memory:') db.exec('PRAGMA journal_mode = WAL;');
   db.exec('PRAGMA busy_timeout = 5000;');
   db.exec(SCHEMA);
+  db.exec(EXTRA);
+  for (const [table, col, def] of COLUMNS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === col)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${col} ${def}`);
+  }
   return db;
 }
 

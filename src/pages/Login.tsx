@@ -25,8 +25,8 @@ export function Login() {
     <div className="login">
       <form className="login-card" onSubmit={submit}>
         <div className="brand" style={{ padding: 0 }}>
-          <div className="brand-mark" aria-hidden />
-          <div className="brand-word">BRAD<span>OS</span></div>
+          <svg className="brand-x" viewBox="0 0 24 24" aria-hidden><path d="M4 4 L20 20" stroke="#FFD400" strokeWidth="3.4" strokeLinecap="round" /><path d="M4 20 L22 2" stroke="#00E5FF" strokeWidth="3.4" strokeLinecap="round" /></svg>
+          <div className="brand-word">BRAD HQ<span>OS</span></div>
         </div>
         <h1 className="display">
           One place for <em>everything</em> you know.

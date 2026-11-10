@@ -16,6 +16,7 @@ import { parseMarkdown, serializeMarkdown, safeFilename, titleFromBody } from '.
 import { removeSample } from './seed.ts';
 import { backlinks, related, graph } from './repo/graph.ts';
 import { mountMcp } from './mcp.ts';
+import * as money from './repo/money.ts';
 
 type Env = { Variables: { scope: Scope; sessionId: string; lensUntil: string | null } };
 
@@ -51,6 +52,9 @@ const projectSchema = z.object({
   status: z.enum(projects.PROJECT_STATUSES).optional(),
   nextAction: z.string().max(500).optional(),
   dueDate: dateStr,
+  links: z.array(z.object({ label: z.string().max(80), url: z.string().max(1000) })).max(30).optional(),
+  people: z.array(z.string().max(100)).max(50).optional(),
+  statusLabel: z.string().max(120).optional(),
 });
 
 const taskSchema = z.object({
@@ -360,6 +364,23 @@ export function createApp(opts: AppOptions) {
     c.header('Content-Type', 'application/zip');
     c.header('Content-Disposition', `attachment; filename="brad-os-${scope.boundary}-${stamp}.zip"`);
     return c.body(zip.buffer as ArrayBuffer);
+  });
+
+  app.get('/api/money', (c) => c.json(money.listSubs(db, c.var.scope)));
+  app.patch('/api/subs/:id', async (c) => {
+    const b = z.object({ decision: z.string().max(40).optional(), status: z.string().max(40).optional() }).parse(await c.req.json());
+    return c.json(money.updateSub(db, c.var.scope, c.req.param('id'), b));
+  });
+  app.get('/api/waiting', (c) => c.json(money.listWaiting(db, c.var.scope, c.req.query('status') === 'done' ? 'done' : 'open')));
+  app.patch('/api/waiting/:id', async (c) => {
+    const { status } = z.object({ status: z.enum(['open', 'done']) }).parse(await c.req.json());
+    money.setWaitingStatus(db, c.var.scope, c.req.param('id'), status);
+    return c.json({ ok: true });
+  });
+  app.post('/api/import/hq', async (c) => {
+    const b = (await c.req.json()) as Parameters<typeof money.importHq>[2];
+    if (!b || typeof b !== 'object') throw new HttpError(400, 'Expected JSON');
+    return c.json(money.importHq(db, c.var.scope, b));
   });
 
   app.post('/api/sample/remove', (c) => c.json(removeSample(db, c.var.scope.boundary)));
