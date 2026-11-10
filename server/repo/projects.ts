@@ -160,7 +160,7 @@ export function listTasks(
   return all<Task>(
     db,
     `${TASK_SELECT} WHERE ${where.join(' AND ')}
-     ORDER BY t.status = 'done', t.due_date IS NULL, t.due_date, t.priority DESC, t.created_at DESC LIMIT ${limit}`,
+     ORDER BY t.status = 'done', t.due_date IS NULL, t.due_date, t.priority DESC, t.created_at ASC, t.rowid ASC LIMIT ${limit}`,
     ...params,
   );
 }
