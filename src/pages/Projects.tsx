@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, FileText, Plus, Trash2 } from 'lucide-react';
-import { api, type Project, type ProjectStatus } from '../api';
+import { api, parseLinks, parseList, type Project, type ProjectStatus } from '../api';
 import { rememberWorkspace, useDefaultWorkspace, useProjects, useRefresh, useWorkspaces } from '../hooks';
-import { dueLabel, timeAgo } from '../lib/format';
+import { timeAgo } from '../lib/format';
 import { plainExcerpt } from '../lib/markdown';
 import { Dialog, Empty, OriginBadge, WsDot, useUI } from '../components/ui';
 import { TaskRow } from '../components/TaskRow';
@@ -19,7 +19,7 @@ export function Projects() {
   const ws = params.get('ws') ?? '';
   const creating = params.get('new') === '1';
 
-  const list = projects.filter((p) => (status === 'open' ? p.status !== 'done' : status === 'all' || p.status === status) && (!ws || p.workspace_id === ws));
+  const list = [...projects].sort((a, b) => Number(!!b.status_label) - Number(!!a.status_label)).filter((p) => (status === 'open' ? p.status !== 'done' : status === 'all' || p.status === status) && (!ws || p.workspace_id === ws));
 
   return (
     <div className="page">
@@ -52,26 +52,29 @@ export function Projects() {
 }
 
 function ProjectCard({ p }: { p: Project }) {
+  const nav = useNavigate();
   const total = p.open_tasks + p.done_tasks;
-  const due = dueLabel(p.status === 'done' ? null : p.due_date);
+  const people = parseList(p.people);
+  const links = parseLinks(p.links);
   return (
-    <Link to={`/projects/${p.id}`} className="project-card">
+    <article className="project-card" onClick={(e) => !(e.target as HTMLElement).closest('a') && nav(`/projects/${p.id}`)} style={{ cursor: 'pointer' }}>
       <div className="row small muted" style={{ gap: 6 }}>
         <WsDot color={p.workspace_color} /> <span className="truncate">{p.workspace_name}</span>
         <span className="spacer" />
-        <span className={`status ${p.status}`}>{STATUS_LABEL[p.status]}</span>
+        {p.status_label ? <span className="pill" style={{ color: 'var(--ok)' }}>{p.status_label}</span> : <span className={`status ${p.status}`}>{STATUS_LABEL[p.status]}</span>}
       </div>
-      <h2 className="h2">{p.title}</h2>
-      {p.summary && <p className="small dim" style={{ margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{p.summary}</p>}
-      <span className="spacer" />
-      {p.next_action && <div className="small truncate"><span className="muted">Next → </span>{p.next_action}</div>}
+      <h2 className="h2" style={{ fontSize: 22 }}>{p.title}</h2>
+      {p.summary && <p className="small dim" style={{ margin: 0 }}>{p.summary}</p>}
+      {people.length > 0 && <div className="people">{people.map((c) => <span key={c}>{c}</span>)}</div>}
+      {p.next_action && <div className="next-box"><b>Next move</b>{p.next_action}</div>}
       <div className="progress"><i style={{ width: `${total ? (p.done_tasks / total) * 100 : 0}%` }} /></div>
-      <div className="row mono muted" style={{ fontSize: 11 }}>
-        <span>{p.done_tasks}/{total} tasks</span><span>·</span><span>{p.note_count} notes</span>
-        <span className="spacer" />
-        {due ? <span className={`due ${due.tone}`}>{due.text}</span> : <span>{timeAgo(p.updated_at)}</span>}
-      </div>
-    </Link>
+      <span className="mono muted" style={{ fontSize: 11.5 }}>{p.open_tasks} open · {p.done_tasks} done · {p.note_count} notes · {timeAgo(p.updated_at)}</span>
+      {links.length > 0 && (
+        <div className="linkrow">
+          {links.map((l, i) => <a key={l.url} className={`btn sm ${i === 0 ? 'primary' : ''}`} href={l.url} target="_blank" rel="noopener noreferrer">{l.label}</a>)}
+        </div>
+      )}
+    </article>
   );
 }
 
@@ -197,6 +200,12 @@ export function ProjectDetail() {
           <input className="title-input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} onBlur={() => form.title.trim() && form.title !== p.title && save({ title: form.title })} aria-label="Project title" />
           <textarea className="body-input" style={{ minHeight: 0, fontSize: 15, color: 'var(--text-2)' }} rows={2} value={form.summary} placeholder="Add a summary: why this matters, what done looks like…" onChange={(e) => setForm({ ...form, summary: e.target.value })} onBlur={() => form.summary !== p.summary && save({ summary: form.summary })} aria-label="Summary" />
 
+          {parseList(p.people).length > 0 && <div className="people" style={{ marginTop: 8 }}>{parseList(p.people).map((c) => <span key={c}>{c}</span>)}</div>}
+          {parseLinks(p.links).length > 0 && (
+            <div className="linkrow" style={{ marginTop: 12 }}>
+              {parseLinks(p.links).map((l, i) => <a key={l.url} className={`btn sm ${i === 0 ? 'primary' : ''}`} href={l.url} target="_blank" rel="noopener noreferrer">{l.label} ↗</a>)}
+            </div>
+          )}
           <div className="next-action" style={{ margin: '14px 0 22px' }}>
             <ArrowRight />
             <div style={{ flex: 1 }}>

@@ -14,6 +14,7 @@ import { Tasks } from './pages/Tasks';
 import { Search } from './pages/Search';
 import { Settings } from './pages/Settings';
 import { Graph } from './pages/Graph';
+import { Money } from './pages/Money';
 
 export function App() {
   const qc = useQueryClient();
@@ -44,6 +45,7 @@ export function App() {
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/search" element={<Search />} />
           <Route path="/graph" element={<Graph />} />
+          <Route path="/money" element={<Money />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

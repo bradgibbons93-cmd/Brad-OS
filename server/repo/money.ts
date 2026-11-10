@@ -92,7 +92,12 @@ export function importHq(db: DB, scope: Scope, input: { projects?: HqProject[]; 
       if (projByKey.has(key)) return projByKey.get(key)!;
       const title = key === 'money' ? 'Money & subscriptions' : key === 'hq' ? 'HQ housekeeping' : key;
       const found = listProjects(db, scope).find((p) => p.title === title);
-      const id = found?.id ?? createProject(db, scope, { workspaceId: ws, title, status: 'active' }).id;
+      const id = found?.id ?? createProject(db, scope, {
+        workspaceId: ws, title, status: 'active',
+        summary: key === 'money' ? 'Cancel what you don\u2019t use, fix failing cards, keep one storage plan. Full list on the Money page.' : 'Keeping the HQ, accounts and tools tidy.',
+        statusLabel: key === 'money' ? 'Ongoing' : 'Ongoing',
+        links: key === 'money' ? [{ label: 'Money page', url: '/money' }] : [],
+      }).id;
       projByKey.set(key, id);
       return id;
     };

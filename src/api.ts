@@ -55,6 +55,9 @@ export interface Project {
   status: ProjectStatus;
   next_action: string;
   due_date: string | null;
+  links: string;
+  people: string;
+  status_label: string;
   updated_at: string;
   open_tasks: number;
   done_tasks: number;
@@ -72,6 +75,9 @@ export interface Task {
   status: TaskStatus;
   priority: number;
   due_date: string | null;
+  links: string;
+  tool: string;
+  needs_me: number;
   created_at: string;
   completed_at: string | null;
 }
@@ -208,6 +214,10 @@ export const api = {
   today: () => request<TodayData>('GET', '/today'),
   importFiles: (b: { workspaceId: string; folderId?: string | null; files: { name: string; content: string }[] }) =>
     request<{ created: { id: string; title: string }[] }>('POST', '/import', b),
+  money: () => request<Sub[]>('GET', '/money'),
+  updateSub: (id: string, b: { decision?: string; status?: string }) => request<Sub>('PATCH', `/subs/${id}`, b),
+  waiting: () => request<Waiting[]>('GET', '/waiting'),
+  setWaiting: (id: string, status: 'open' | 'done') => request('PATCH', `/waiting/${id}`, { status }),
   removeSample: () => request<Record<string, number>>('POST', '/sample/remove'),
 };
 
@@ -245,3 +255,8 @@ export interface TaskInput {
 export interface NoteLite { id: string; title: string; kind: NoteKind; origin: Origin; workspace_id: string; workspace_name: string; workspace_color: string; updated_at: string }
 export interface GraphNode { id: string; type: 'note' | 'project' | 'workspace' | 'tag'; label: string; kind?: string; color: string; workspace_id?: string }
 export interface GraphEdge { source: string; target: string; type: 'link' | 'project' | 'workspace' | 'tag' }
+
+export interface Sub { id: string; name: string; grp: string; plan: string; amount: number | null; cycle: string; renews: string | null; status: string; suggest: string; decision: string; note: string; manage: string; via: string; evidence: string | null }
+export interface Waiting { id: string; category: string; from_name: string; subject: string; why: string; next: string; url: string | null; date: string | null; source: string; status: string }
+export const parseLinks = (s: string | undefined | null): { label: string; url: string }[] => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
+export const parseList = (s: string | undefined | null): string[] => { try { const v = JSON.parse(s || '[]'); return Array.isArray(v) ? v.map(String) : []; } catch { return []; } };

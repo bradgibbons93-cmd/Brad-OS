@@ -453,12 +453,11 @@ a.stat:hover b { color: var(--accent); }
 .prose input[type='checkbox'] { accent-color: var(--accent); }
 
 /* ── Projects ─────────────────────────────────────────────── */
-.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 14px; }
+.project-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; align-items: start; }
 .project-card {
   display: flex; flex-direction: column; gap: 10px; padding: 18px; border-radius: var(--r-lg);
   background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
   transition: transform 0.2s var(--ease), border-color 0.2s;
-  min-height: 190px;
 }
 .project-card:hover { transform: translateY(-2px); border-color: var(--line-2); }
 .project-card .h2 { font-size: 19px; }

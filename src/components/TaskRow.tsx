@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Trash2 } from 'lucide-react';
-import { api, type Task, type TaskStatus } from '../api';
+import { api, parseLinks, type Task, type TaskStatus } from '../api';
 import { useRefresh } from '../hooks';
 import { dueLabel } from '../lib/format';
 import { WsDot, useUI } from './ui';
@@ -57,6 +57,12 @@ export function TaskRow({ task, showProject = true, editable = false, focus = fa
         ) : (
           <span onDoubleClick={() => editable && setEditing(true)}>{task.title}</span>
         )}
+        {(task.tool || parseLinks(task.links).length > 0) && task.status !== 'done' && (
+          <div className="tool">
+            {task.tool && <span>Use: {task.tool}</span>}
+            {parseLinks(task.links).map((l) => <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer">{l.label} ↗</a>)}
+          </div>
+        )}
         {showProject && (
           <div className="small muted row" style={{ gap: 6, marginTop: 2 }}>
             <WsDot color={task.workspace_color} />
@@ -64,7 +70,8 @@ export function TaskRow({ task, showProject = true, editable = false, focus = fa
           </div>
         )}
       </div>
-      {task.priority > 0 && task.status !== 'done' && <span className="prio" title="Priority">{'!'.repeat(task.priority)}</span>}
+      {!!task.needs_me && task.status !== 'done' && <span className="wtag bill" title="Needs you">You</span>}
+      {task.priority > 0 && task.status !== 'done' && <span className="prio" title="Priority">{task.priority === 2 ? 'NOW' : 'NEXT'}</span>}
       {task.status === 'doing' && <span className="due today">Doing</span>}
       {due && <span className={`due ${due.tone}`}>{due.text}</span>}
       {editable && (

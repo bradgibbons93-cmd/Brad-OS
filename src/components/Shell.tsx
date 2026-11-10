@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import {
-  Briefcase, CheckSquare, Network, FolderKanban, Home, Inbox, Library, Lock, LogOut, Menu, Moon, Plus, Search, Settings, Sun, Unlock, Users,
+  Briefcase, CheckSquare, Network, Wallet, FolderKanban, Home, Inbox, Library, Lock, LogOut, Menu, Moon, Plus, Search, Settings, Sun, Unlock, Users,
 } from 'lucide-react';
 import { api } from '../api';
 import { resetSpaceData, useInboxCount, useMe, useWorkspaces } from '../hooks';
@@ -145,6 +145,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <NavItem to="/knowledge" icon={Library} label="Knowledge" />
  <NavItem to="/projects" icon={FolderKanban} label="Projects" />
           <NavItem to="/tasks" icon={CheckSquare} label="Tasks" />
+          <NavItem to="/money" icon={Wallet} label="Money" />
           <NavItem to="/graph" icon={Network} label="Graph" />
           <NavItem to="/search" icon={Search} label="Search" />
         </div>
