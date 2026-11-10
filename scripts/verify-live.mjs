@@ -68,7 +68,7 @@ for (const [path, text] of [['/inbox', 'Inbox'], ['/knowledge', 'All notes'], ['
   });
 }
 await check('search works', async () => {
-  await page.goto(`${base}/search?q=welcome`);
+  await page.goto(`${base}/search?q=runnit`);
   await page.locator('.hit').first().waitFor({ timeout: 10000 });
 });
 await check('family space asks for password', async () => {
