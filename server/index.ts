@@ -27,7 +27,7 @@ const db = openDb(join(dataDir, 'brad-os.db'));
 ensureWorkspaces(db);
 if ((process.env.SEED_SAMPLE ?? 'true') !== 'false' && seedSample(db)) console.log('Seeded sample data.');
 
-const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined });
+const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined });
 
 const distDir = resolve('dist');
 if (existsSync(distDir)) {

@@ -287,6 +287,7 @@ const COLUMNS: [string, string, string][] = [
   ['tasks', 'tool', "TEXT NOT NULL DEFAULT ''"],
   ['tasks', 'needs_me', 'INTEGER NOT NULL DEFAULT 0'],
   ['tasks', 'ext_id', 'TEXT'],
+  ['captures', 'ext_id', 'TEXT'],
 ];
 
 export function openDb(file: string): DB {

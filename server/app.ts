@@ -16,6 +16,7 @@ import { parseMarkdown, serializeMarkdown, safeFilename, titleFromBody } from '.
 import { removeSample } from './seed.ts';
 import { backlinks, related, graph } from './repo/graph.ts';
 import { mountMcp } from './mcp.ts';
+import { mountIngest } from './ingest.ts';
 import * as money from './repo/money.ts';
 
 type Env = { Variables: { scope: Scope; sessionId: string; lensUntil: string | null } };
@@ -26,6 +27,7 @@ export interface AppOptions {
   sessionSecret: string;
   secureCookies?: boolean;
   mcpToken?: string;
+  familyIngestToken?: string;
 }
 
 const optStr = z.string().max(500).nullable().optional();
@@ -120,6 +122,7 @@ export function createApp(opts: AppOptions) {
   });
 
   mountMcp(app, db, opts.mcpToken);
+  mountIngest(app, db, opts.familyIngestToken);
 
   app.get('/api/health', (c) => c.json({ ok: true }));
 

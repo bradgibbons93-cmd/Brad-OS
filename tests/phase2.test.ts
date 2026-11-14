@@ -74,3 +74,50 @@ describe('MCP endpoint', () => {
     expect((await call('POST', '/mcp?key=tok-123', { jsonrpc: '2.0', id: 2, method: 'ping' })).status).toBe(200);
   });
 });
+
+describe('Yumi → Family ingest', () => {
+  const mk = () => {
+    const db = openDb(':memory:');
+    ensureWorkspaces(db);
+    const app = createApp({ db, password: PW, sessionSecret: 'test-secret-test-secret', familyIngestToken: 'fam-tok' });
+    const post = (body: unknown, token = 'fam-tok') => app.request('/ingest/family', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
+    return { db, app, post };
+  };
+
+  it('rejects a wrong token and works without any session', async () => {
+    const { post } = mk();
+    expect((await post({ items: [] }, 'nope')).status).toBe(401);
+    expect((await post({ items: [] })).status).toBe(200);
+  });
+
+  it('creates Family tasks/captures, dedupes by id, and ignores extra fields', async () => {
+    const { db, post } = mk();
+    const items = [
+      { id: 'event:1', kind: 'event', title: 'Dance class', who: 'Sam', due: '2030-02-03', at: '2030-02-03T16:00:00Z', diary: 'SECRET' },
+      { id: 'task:2', kind: 'task', title: 'Tidy room' },
+      { id: 'reward:3', kind: 'reward', title: 'Extra screen time' },
+      { id: 'bad', kind: 'diary', title: 'x' },
+    ];
+    expect(await (await post({ items })).json()).toEqual({ added: 3, skipped: 1 });
+    expect(await (await post({ items })).json()).toEqual({ added: 0, skipped: 4 });
+    const t = db.prepare("SELECT t.title, t.details, w.boundary FROM tasks t JOIN workspaces w ON w.id = t.workspace_id WHERE t.ext_id = 'yumi:event:1'").get() as any;
+    expect(t.boundary).toBe('family');
+    expect(t.title).toContain('Dance class');
+    expect(JSON.stringify(db.prepare('SELECT * FROM tasks').all())).not.toContain('SECRET');
+    expect((db.prepare("SELECT boundary FROM captures WHERE ext_id = 'yumi:reward:3'").get() as any).boundary).toBe('family');
+  });
+
+  it('never appears in the Work & Life lens', async () => {
+    const { db, app, post } = mk();
+    await post({ items: [{ id: 'task:9', kind: 'task', title: 'Family only thing' }] });
+    const call = async (method: string, path: string, body?: unknown) => {
+      const r = await app.request(path, { method, headers: { 'content-type': 'application/json', 'x-brad-os': '1', cookie: cookieRef.v }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const set = r.headers.get('set-cookie'); if (set) cookieRef.v = set.split(';')[0];
+      return r.json() as Promise<any>;
+    };
+    const cookieRef = { v: '' };
+    await call('POST', '/api/auth/login', { password: PW });
+    expect(JSON.stringify(await call('GET', '/api/tasks'))).not.toContain('Family only thing');
+    expect(db.prepare("SELECT COUNT(*) AS n FROM tasks WHERE ext_id LIKE 'yumi:%'").get()).toEqual({ n: 1 });
+  });
+});
