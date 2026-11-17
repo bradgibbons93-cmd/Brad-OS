@@ -3,12 +3,12 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, FileText, Plus, Trash2 } from 'lucide-react';
 import { api, parseLinks, parseList, type Project, type ProjectStatus } from '../api';
-import { rememberWorkspace, useDefaultWorkspace, useProjects, useRefresh, useWorkspaces } from '../hooks';
+import { rememberWorkspace, useMe, useDefaultWorkspace, useProjects, useRefresh, useWorkspaces } from '../hooks';
 import { timeAgo } from '../lib/format';
 import { plainExcerpt } from '../lib/markdown';
 import { Dialog, Empty, OriginBadge, WsDot, useUI } from '../components/ui';
 import { TaskRow } from '../components/TaskRow';
-import { projectHref } from '../lib/hq';
+import { projectHref, projectHq } from '../lib/hq';
 
 const STATUS_LABEL: Record<ProjectStatus, string> = { planning: 'Planning', active: 'Active', paused: 'Paused', done: 'Done' };
 
@@ -16,6 +16,8 @@ export function Projects() {
   const [params, setParams] = useSearchParams();
   const { data: projects = [], isLoading } = useProjects();
   const { data: workspaces = [] } = useWorkspaces();
+  const { data:me }=useMe();
+  const { data:hq }=useQuery({queryKey:['hq-config',me?.lens],queryFn:api.hqConfig});
   const status = params.get('status') ?? 'open';
   const ws = params.get('ws') ?? '';
   const creating = params.get('new') === '1';
@@ -45,20 +47,21 @@ export function Projects() {
       {isLoading ? <div className="muted">Loading…</div> : list.length === 0 ? (
         <Empty title="No projects here">Projects hold the notes, tasks, decisions and research for one outcome.</Empty>
       ) : (
-        <div className="project-grid">{list.map((p) => <ProjectCard key={p.id} p={p} />)}</div>
+        <div className="project-grid">{list.map((p) => <ProjectCard key={p.id} p={p} logo={hq?.projects[(projectHq(p.title)??'').split('/').pop()??'']?.logoPreview} />)}</div>
       )}
       {creating && <NewProjectDialog onClose={() => setParams((p) => (p.delete('new'), p))} />}
     </div>
   );
 }
 
-function ProjectCard({ p }: { p: Project }) {
+function ProjectCard({ p, logo }: { p: Project; logo?:string }) {
   const nav = useNavigate();
   const total = p.open_tasks + p.done_tasks;
   const people = parseList(p.people);
   const links = parseLinks(p.links);
   return (
-    <article className="project-card" onClick={(e) => !(e.target as HTMLElement).closest('a') && nav(projectHref(p.title, p.id))} style={{ cursor: 'pointer' }}>
+    <article className="project-card glass-panel" onClick={(e) => !(e.target as HTMLElement).closest('a') && nav(projectHref(p.title, p.id))} style={{ cursor: 'pointer' }}>
+      {logo && <div className="project-logo-preview"><img src={logo} alt={`${p.title} logo`} /></div>}
       <div className="row small muted" style={{ gap: 6 }}>
         <WsDot color={p.workspace_color} /> <span className="truncate">{p.workspace_name}</span>
         <span className="spacer" />
@@ -191,7 +194,7 @@ export function ProjectDetail() {
   return (
     <div className="page">
       <div className="row" style={{ padding: '10px 0 4px' }}>
-        <Link to="/projects" className="btn ghost sm"><ArrowLeft /> Projects</Link>
+        <Link to="/projects" className="btn ghost sm"><ArrowLeft /> Projects</Link>{projectHq(p.title) && <Link to={projectHref(p.title,p.id)} className="btn primary sm">Open project HQ <ArrowRight /></Link>}
       </div>
       <div className="project-layout">
         <div style={{ minWidth: 0 }}>

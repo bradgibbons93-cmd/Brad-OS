@@ -885,3 +885,5 @@ a.stat:hover b { color: var(--accent); }
 .hq-asset-preview video { width:100%;height:100%;object-fit:contain;background:#07070a; }
 
 .hq-launch-art{display:block;width:100%;max-height:330px;object-fit:contain;border-radius:12px;background:#08080a;margin:12px 0}.hq-post-caption{white-space:pre-line;padding:12px;border-left:2px solid var(--hq-accent);color:var(--text)!important}
+
+.project-logo-preview{height:110px;display:grid;place-items:center;background:linear-gradient(135deg,#1b1710,#090b10);border-radius:12px;margin-bottom:14px;border:1px solid #ffffff14}.project-logo-preview img{max-width:75%;max-height:65px;object-fit:contain}

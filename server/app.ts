@@ -187,6 +187,16 @@ export function createApp(opts: AppOptions) {
     const f=hqFiles.file(slug,section,path);if(!f)return c.json({error:'File not found'},404);
     c.header('Content-Type',f.type);c.header('Cache-Control','private, max-age=300');c.header('Cross-Origin-Resource-Policy','cross-origin');
     if(f.type.startsWith('text/html')){c.header('Content-Security-Policy',"sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; media-src data:; font-src https://fonts.gstatic.com data:; connect-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");c.header('X-Frame-Options','SAMEORIGIN');}
+    if(f.type.startsWith('video/')) {
+      c.header('Accept-Ranges','bytes');
+      const range=c.req.header('range');
+      if(range){const m=/^bytes=(\d*)-(\d*)$/.exec(range);let start=0,end=f.body.length-1;
+        if(m && (m[1]||m[2])){if(m[1]){start=Number(m[1]);if(m[2])end=Math.min(end,Number(m[2]));}else start=Math.max(0,f.body.length-Number(m[2]));}
+        else {c.header('Content-Range','bytes */'+f.body.length);return c.body(null,416);}
+        if(start>end||start>=f.body.length){c.header('Content-Range','bytes */'+f.body.length);return c.body(null,416);}
+        c.header('Content-Range',`bytes ${start}-${end}/${f.body.length}`);c.header('Content-Length',String(end-start+1));return c.body(new Uint8Array(f.body.subarray(start,end+1)),206);
+      }
+    }
     return c.body(new Uint8Array(f.body));
   });
 

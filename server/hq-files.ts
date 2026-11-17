@@ -56,6 +56,7 @@ export class HqFiles {
       if(existsSync(dir))for(const section of readdirSync(dir).filter(s=>part.test(s))){
         try {const m=manifestSchema.parse(JSON.parse(readFileSync(join(dir,section,'manifest.json'),'utf8')));const prefix=`/api/hq-files/${slug}/${section}/`;
           project.archivePages.push({title:m.title,url:prefix+'index.html',section});
+          if(slug==='runnit' && existsSync(join(dir,section,'p/runnit-wordmark.png')))project.logoPreview=prefix+'p/runnit-wordmark.png';
           const assets=m.assets.map(a=>({key:section+'/'+a.path,name:a.name,type:a.type,category:a.category,status:'Stored on Railway',note:a.note,url:prefix+a.path,thumbnailUrl:a.type==='image'?prefix+a.path:undefined,previewUrl:a.type==='video'?prefix+a.path:undefined,launchPick:a.launchPick}));
           if(m.launch){project.launch={...m.launch,steps:m.launch.steps.map(s=>({...s,assetUrl:s.assetPath && safePath(s.assetPath)?prefix+s.assetPath:undefined}))};project.assets.forEach(a=>{a.launchPick=false;});}
           const names=new Set(assets.map(a=>a.name.toLowerCase().replace(/[^a-z0-9]/g,'')));
