@@ -14,7 +14,7 @@ export type LibraryAsset = {
 };
 
 export type HqLink = { label: string; url: string; type: HqTab | 'source'; detail?: string };
-export type HqStep = { eyebrow: string; title: string; text: string };
+export type HqStep = { eyebrow: string; title: string; text: string; assetUrl?: string; caption?: string };
 export type HqProductTruth = { title: string; text: string; accessNote: string };
 export type HqLaunch = { statement: string; description: string; steps: HqStep[]; caption: string; guardrail: string };
 export type HqBrand = { ruleTitle: string; ruleText: string; typography: string; colors: [string, string][] };
@@ -36,6 +36,7 @@ export type HqProject = {
   productTruth?: HqProductTruth;
   launch?: HqLaunch;
   brand?: HqBrand;
+  archivePages?: {title:string;section:string;url:string}[];
 };
 
 export type HqConfig = { projects: Record<string, HqProject> };

@@ -34,7 +34,7 @@ try {
 if ((process.env.SEED_SAMPLE ?? 'true') !== 'false' && seedSample(db)) console.log('Seeded sample data.');
 rewriteLegacyArtifactLinks(db, artifactRoutes);
 
-const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined, hqConfigJson });
+const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined, hqConfigJson, hqDataDir: join(dataDir,'hq') });
 
 const distDir = resolve('dist');
 if (existsSync(distDir)) {

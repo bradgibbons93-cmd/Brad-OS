@@ -20,7 +20,7 @@ const TAB_ITEMS: { id: HqTab; label: string; icon: typeof LayoutDashboard }[] = 
 export function HqCatalog() {
   const [params] = useSearchParams();
   const { data: me } = useMe();
-  const { data, isLoading } = useQuery({ queryKey: ['hq-config'], queryFn: api.hqConfig });
+  const { data, isLoading } = useQuery({ queryKey: ['hq-config', me?.lens], queryFn: api.hqConfig });
   const artifactId = params.get('artifact');
   const projects = Object.entries(data?.projects ?? {}).filter(([, p]) => p.boundary === me?.lens);
   return (
@@ -39,7 +39,7 @@ export function HQ() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showAssets, setShowAssets] = useState(false);
   const { data: me } = useMe();
-  const { data, isLoading } = useQuery({ queryKey: ['hq-config'], queryFn: api.hqConfig });
+  const { data, isLoading } = useQuery({ queryKey: ['hq-config', me?.lens], queryFn: api.hqConfig });
   const project = data?.projects[slug];
   const tabValue = searchParams.get('tab') as HqTab | null;
   const activeTab: HqTab = tabValue && TAB_ITEMS.some((t) => t.id === tabValue) ? tabValue : 'overview';
@@ -68,7 +68,7 @@ export function HQ() {
         {activeTab === 'brand' && <BrandSection project={project} />}
         {activeTab === 'studios' && <StudiosSection project={project} />}
         {activeTab === 'docs' && <SourceFiles project={project} />}
-      </> : <GenericProject project={project} />}
+      </> : <GenericProject project={project} tab={activeTab} />}
       {showAssets && <AssetBrowser project={project} onClose={() => setShowAssets(false)} />}
     </div>
   );
@@ -109,8 +109,8 @@ function RunnitWebsite({ project }: { project: HqProject }) {
 }
 
 function Library({ project, onViewAll }: { project: HqProject; onViewAll: () => void }) {
-  const featured = project.assets.filter((a) => ['New videos', 'Brand source', 'App screens'].includes(a.category)).slice(0, 8);
-  return <section className="hq-section"><SectionHead eyebrow="Runnit · linked source of truth" title="Creative library" text={`${project.assets.length} Drive assets grouped by brand, product, launch and review status.`} action={<button className="btn primary" onClick={onViewAll}><Search size={15} /> Browse all assets</button>} /><FolderLinks links={project.links.filter((l) => ['library', 'brand'].includes(l.type))} /><div className="hq-library-callout"><ShieldCheck size={17} /><span><b>Review flag is intentional.</b> Check names, screenshots, prices, product claims and visual direction before sharing uploaded promo videos publicly.</span></div><AssetGrid assets={featured} /></section>;
+  const featured = project.assets.filter((a) => a.launchPick || a.category === 'Uploaded videos').slice(0, 12);
+  return <section className="hq-section"><SectionHead eyebrow="Runnit · linked source of truth" title="Creative library" text={`${project.assets.length} assets grouped by collection, product and review status.`} action={<button className="btn primary" onClick={onViewAll}><Search size={15} /> Browse all assets</button>} /><ArchiveLinks project={project} section="library-source" /><FolderLinks links={project.links.filter((l) => ['library', 'brand'].includes(l.type))} /><div className="hq-library-callout"><ShieldCheck size={17} /><span><b>Review flag is intentional.</b> Check names, screenshots, prices, product claims and visual direction before sharing uploaded promo videos publicly.</span></div><AssetGrid assets={featured} /></section>;
 }
 
 function AssetBrowser({ project, onClose }: { project: HqProject; onClose: () => void }) {
@@ -128,7 +128,7 @@ function AssetGrid({ assets }: { assets: LibraryAsset[] }) {
 
 function AssetCard({ asset: a }: { asset: LibraryAsset }) {
   return <article className="hq-asset-card glass-panel"><div className={`hq-asset-preview ${a.type === 'video' ? 'video' : ''}`}>
-    {a.type === 'video' && a.previewUrl ? <iframe loading="lazy" src={a.previewUrl} title={a.name} allow="autoplay" /> : a.type === 'document' ? <a className="hq-asset-document" href={a.url} target="_blank" rel="noopener noreferrer"><FileText size={30} /><span>Open reference</span></a> : <a href={a.url} target="_blank" rel="noopener noreferrer">{a.thumbnailUrl ? <img loading="lazy" src={a.thumbnailUrl} alt={a.name} /> : <Image />}</a>}
+    {a.type === 'video' && a.previewUrl?.startsWith('/api/hq-files/') ? <video controls preload="metadata" src={a.previewUrl} aria-label={a.name} /> : a.type === 'video' && a.previewUrl ? <iframe loading="lazy" src={a.previewUrl} title={a.name} allow="autoplay" /> : a.type === 'document' ? <a className="hq-asset-document" href={a.url} target="_blank" rel="noopener noreferrer"><FileText size={30} /><span>Open reference</span></a> : <a href={a.url} target="_blank" rel="noopener noreferrer">{a.thumbnailUrl ? <img loading="lazy" src={a.thumbnailUrl} alt={a.name} /> : <Image />}</a>}
     <a className="hq-asset-open" href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open ${a.name}`}><ArrowUpRight size={13} /></a>
   </div><div className="hq-asset-meta"><span className="hq-asset-category">{a.category}</span><h3>{a.name}</h3><span className="hq-asset-status">{a.status}</span><p>{a.note}</p><a className="hq-asset-link" href={a.url} target="_blank" rel="noopener noreferrer">Open original <ExternalLink size={12} /></a></div></article>;
 }
@@ -136,7 +136,7 @@ function AssetCard({ asset: a }: { asset: LibraryAsset }) {
 function LaunchKit({ project }: { project: HqProject }) {
   const picked = project.assets.filter((a) => a.launchPick);
   const launch = project.launch;
-  return <section className="hq-section"><SectionHead eyebrow={`${project.title} · launch kit · revised`} title="A clear launch story." text="A practical launch kit built from the current brand source and linked library files." action={<LinkPill links={project.links.filter((l) => l.type === 'brand')} />} /><div className="hq-launch-banner glass-panel"><div className="eyebrow">One sentence to keep true</div><h3>{launch?.statement ?? project.summary}</h3><p>{launch?.description ?? 'Use current product screens and verified product behavior.'}</p></div><div className="hq-launch-grid">{(launch?.steps ?? []).map((step, i) => <Step key={step.title} n={String(i + 1).padStart(2, '0')} eyebrow={step.eyebrow} title={step.title} text={step.text} />)}</div>{launch?.caption && <div className="hq-caption-card glass-panel"><div className="eyebrow">Starter caption · review before publishing</div><p>{launch.caption}</p><div className="hq-caption-note"><Check size={14} /> {launch.guardrail}</div></div>}<div className="hq-section-head hq-picked-head"><div><div className="eyebrow">Picked from the library</div><h2>Use these source files first</h2></div></div><AssetGrid assets={picked} /><div className="hq-launch-foot"><ShieldCheck size={16} /> Internal working kit. Nothing is scheduled or published from Brad OS. Review assets before using them in public.</div></section>;
+  return <section className="hq-section"><SectionHead eyebrow={`${project.title} · launch kit · revised`} title="A clear launch story." text="A practical launch kit built from the current brand source and linked library files." action={<LinkPill links={project.links.filter((l) => l.type === 'brand')} />} /><div className="hq-launch-banner glass-panel"><div className="eyebrow">One sentence to keep true</div><h3>{launch?.statement ?? project.summary}</h3><p>{launch?.description ?? 'Use current product screens and verified product behavior.'}</p></div><div className="hq-launch-grid">{(launch?.steps ?? []).map((step, i) => <Step key={step.title} n={String(i + 1).padStart(2, '0')} eyebrow={step.eyebrow} title={step.title} text={step.text} assetUrl={step.assetUrl} caption={step.caption} />)}</div>{launch?.caption && <div className="hq-caption-card glass-panel"><div className="eyebrow">Starter caption · review before publishing</div><p>{launch.caption}</p><div className="hq-caption-note"><Check size={14} /> {launch.guardrail}</div></div>}<div className="hq-section-head hq-picked-head"><div><div className="eyebrow">Picked from the library</div><h2>Use these source files first</h2></div></div><AssetGrid assets={picked} /><div className="hq-launch-foot"><ShieldCheck size={16} /> Internal working kit. Nothing is scheduled or published from Brad OS. Review assets before using them in public.</div></section>;
 }
 
 function BrandSection({ project }: { project: HqProject }) {
@@ -151,10 +151,13 @@ function StudiosSection({ project }: { project: HqProject }) {
 }
 
 function SourceFiles({ project }: { project: HqProject }) {
-  return <section className="hq-section"><SectionHead eyebrow="Project references" title="Source files and folders" text="The source files stay in their canonical location; this page gives them one easy-to-find home." /><LinkList links={project.links} /></section>;
+  return <section className="hq-section"><SectionHead eyebrow="Project references" title="Source files and folders" text="The source files stay in their canonical location; this page gives them one easy-to-find home." /><ArchiveLinks project={project} /><LinkList links={project.links} /></section>;
 }
 
-function GenericProject({ project }: { project: HqProject }) {
+function GenericProject({ project, tab }: { project: HqProject; tab: HqTab }) {
+  if (tab === 'brand') return <BrandSection project={project} />;
+  if (tab === 'docs') return <SourceFiles project={project} />;
+  if (tab === 'library') return <section className="hq-section"><SectionHead eyebrow={project.title} title="Creative library" text="Project assets and original source pages." /><ArchiveLinks project={project} /><AssetGrid assets={project.assets} /></section>;
   return <section className="hq-section"><SectionHead eyebrow={project.eyebrow} title={project.subtitle} text="This Railway page is the project landing page. Source files open from their current Drive or live product location." /><div className="hq-two-col"><div className="glass-panel hq-note-card"><span className="eyebrow">Project home</span><h3>{project.summary}</h3><p>{project.status}</p>{project.driveUrl && <a href={project.driveUrl} target="_blank" rel="noopener noreferrer">Open project Drive <ArrowUpRight size={13} /></a>}</div>{project.logoPreview && <div className="glass-panel hq-logo-card"><img src={project.logoPreview} alt={`${project.title} preview`} /></div>}</div><LinkList links={project.links} /><AssetGrid assets={project.assets} /></section>;
 }
 
@@ -180,6 +183,13 @@ function SectionHead({ eyebrow, title, text, action }: { eyebrow: string; title:
   return <div className="hq-section-head"><div><div className="eyebrow">{eyebrow}</div><h2>{title}</h2><p>{text}</p></div>{action}</div>;
 }
 
-function Step({ n, eyebrow, title, text }: { n: string; eyebrow: string; title: string; text: string }) {
-  return <article className="glass-panel hq-step"><span>{n}</span><div><span className="eyebrow">{eyebrow}</span><h3>{title}</h3><p>{text}</p></div></article>;
+function Step({ n, eyebrow, title, text, assetUrl, caption }: { n: string; eyebrow: string; title: string; text: string; assetUrl?:string; caption?:string }) {
+  const [copied,setCopied]=useState(false);
+  return <article className="glass-panel hq-step"><span>{n}</span><div><span className="eyebrow">{eyebrow}</span><h3>{title}</h3>{assetUrl && <a href={assetUrl} target="_blank" rel="noopener noreferrer"><img className="hq-launch-art" loading="lazy" src={assetUrl} alt={title}/></a>}<p>{text}</p>{caption && <><p className="hq-post-caption">{caption}</p><button className="btn sm" onClick={async()=>{try{await navigator.clipboard.writeText(caption);setCopied(true);}catch{setCopied(false);}}}>{copied?'Copied':'Copy caption'}</button></>}</div></article>;
+}
+
+function ArchiveLinks({project, section}: {project:HqProject;section?:string}) {
+ const pages=(project.archivePages??[]).filter(p=>!section||p.section===section);
+ if(!pages.length)return null;
+ return <div className="hq-doc-list">{pages.map(p=><a className="glass-panel hq-doc-row" key={p.section} href={p.url} target="_blank" rel="noopener noreferrer"><span className="hq-doc-icon"><FileText size={17}/></span><span><b>{p.title}</b><small>Full source page · hosted on Railway</small></span><ArrowUpRight size={15}/></a>)}</div>;
 }

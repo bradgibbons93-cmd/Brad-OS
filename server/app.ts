@@ -18,6 +18,8 @@ import { backlinks, related, graph } from './repo/graph.ts';
 import { mountMcp } from './mcp.ts';
 import { mountIngest } from './ingest.ts';
 import * as money from './repo/money.ts';
+import { HqFiles } from './hq-files.ts';
+import type { HqConfig } from '../src/lib/hq.ts';
 
 type Env = { Variables: { scope: Scope; sessionId: string; lensUntil: string | null } };
 
@@ -29,6 +31,7 @@ export interface AppOptions {
   mcpToken?: string;
   familyIngestToken?: string;
   hqConfigJson?: string;
+  hqDataDir?: string;
 }
 
 const optStr = z.string().max(500).nullable().optional();
@@ -74,6 +77,14 @@ export function createApp(opts: AppOptions) {
   const { db } = opts;
   const auth = new Auth(db, { password: opts.password, sessionSecret: opts.sessionSecret });
   const app = new Hono<Env>();
+
+  app.use('*', async (c,next) => {
+    await next();
+    if (c.req.path.startsWith('/api/hq-files/') && c.res.headers.get('content-type')?.startsWith('text/html')) {
+      c.header('Content-Security-Policy', "sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; media-src data:; font-src https://fonts.gstatic.com data:; connect-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");
+      c.header('Cross-Origin-Resource-Policy','cross-origin');
+    }
+  });
 
   app.use(
     '*',
@@ -126,7 +137,8 @@ export function createApp(opts: AppOptions) {
   mountMcp(app, db, opts.mcpToken);
   mountIngest(app, db, opts.familyIngestToken);
 
-  let hqConfig: unknown = { projects: {} };
+  const hqFiles = new HqFiles(opts.hqDataDir ?? './data/hq');
+  let hqConfig: HqConfig = { projects: {} };
   try { if (opts.hqConfigJson) hqConfig = JSON.parse(opts.hqConfigJson); } catch { console.error('BRAD_HQ_CONFIG_JSON is not valid JSON; using an empty project directory.'); }
 
   app.get('/api/health', (c) => c.json({ ok: true }));
@@ -144,6 +156,9 @@ export function createApp(opts: AppOptions) {
 
   app.use('/api/*', async (c, next) => {
     if (c.req.path === '/api/auth/login' || c.req.path === '/api/health') return next();
+    const importPath = c.req.path.match(/^\/api\/hq-import\/([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_-]+)$/);
+    const grant = importPath && c.req.method === 'POST' ? hqFiles.grant(c.req.header('authorization')?.replace(/^Bearer /, '') ?? '', importPath[1], importPath[2]) : null;
+    if (grant) { c.set('scope', { boundary: grant.boundary }); c.set('sessionId', 'hq-import'); return next(); }
     const s = auth.readSession(getCookie(c, SESSION_COOKIE));
     if (!s) return c.json({ error: 'Not signed in' }, 401);
     c.set('scope', { boundary: s.lens });
@@ -155,7 +170,25 @@ export function createApp(opts: AppOptions) {
   app.get('/api/auth/me', (c) =>
     c.json({ lens: c.var.scope.boundary, lensUntil: c.var.lensUntil, familyLensMinutes: FAMILY_LENS_MINUTES }),
   );
-  app.get('/api/hq-config', (c) => c.json(hqConfig));
+  app.get('/api/hq-config', (c) => c.json(hqFiles.config(hqConfig, c.var.scope.boundary)));
+  app.post('/api/hq-import-token', async (c) => {
+    const { slug, section } = z.object({slug:z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/),section:z.string().regex(/^[a-zA-Z0-9_-]{1,100}$/)}).parse(await c.req.json());
+    if (hqConfig.projects[slug]?.boundary !== c.var.scope.boundary) return c.json({error:'Project is outside this space'},403);
+    return c.json({token:hqFiles.issue(slug,section,c.var.scope.boundary)});
+  });
+  app.post('/api/hq-import/:slug/:section', async (c) => {
+    try { return c.json(await hqFiles.import(c.req.header('authorization')?.replace(/^Bearer /,'')??'',c.req.param('slug'),c.req.param('section'),c.req.raw.body)); }
+    catch(e) { return c.json({error:(e as Error).message},400); }
+  });
+  app.get('/api/hq-files/:slug/:section/*', (c) => {
+    const {slug,section}=c.req.param();
+    if(hqConfig.projects[slug]?.boundary!==c.var.scope.boundary)return c.json({error:'Project is outside this space'},403);
+    const path=decodeURIComponent(c.req.path.split('/').slice(5).join('/'));
+    const f=hqFiles.file(slug,section,path);if(!f)return c.json({error:'File not found'},404);
+    c.header('Content-Type',f.type);c.header('Cache-Control','private, max-age=300');c.header('Cross-Origin-Resource-Policy','cross-origin');
+    if(f.type.startsWith('text/html')){c.header('Content-Security-Policy',"sandbox allow-scripts allow-popups allow-downloads; default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com https://esm.sh; style-src 'unsafe-inline' https://fonts.googleapis.com; img-src data: https:; media-src data:; font-src https://fonts.gstatic.com data:; connect-src 'none'; frame-ancestors 'self'; base-uri 'none'; form-action 'none'");c.header('X-Frame-Options','SAMEORIGIN');}
+    return c.body(new Uint8Array(f.body));
+  });
 
   app.post('/api/auth/logout', (c) => {
     auth.destroySession(c.var.sessionId);
