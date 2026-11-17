@@ -1,3 +1,5 @@
+import type { HqConfig } from './lib/hq';
+
 export type Boundary = 'work' | 'family';
 export type Origin = 'native' | 'external' | 'imported' | 'link' | 'ai';
 export type NoteKind = 'note' | 'decision' | 'research' | 'meeting' | 'reference' | 'person' | 'business';
@@ -166,6 +168,7 @@ const qs = (o: Record<string, string | number | boolean | undefined | null>) => 
 };
 
 export const api = {
+  hqConfig: () => request<HqConfig>('GET', '/hq-config'),
   login: (password: string) => request<{ ok: true }>('POST', '/auth/login', { password }),
   logout: () => request<{ ok: true }>('POST', '/auth/logout'),
   me: () => request<Me>('GET', '/auth/me'),

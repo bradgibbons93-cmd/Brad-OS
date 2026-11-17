@@ -28,6 +28,7 @@ export interface AppOptions {
   secureCookies?: boolean;
   mcpToken?: string;
   familyIngestToken?: string;
+  hqConfigJson?: string;
 }
 
 const optStr = z.string().max(500).nullable().optional();
@@ -82,6 +83,7 @@ export function createApp(opts: AppOptions) {
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", 'data:', 'https:'],
+        frameSrc: ["'self'", 'https://drive.google.com', 'https://runnit-site-production.up.railway.app'],
         fontSrc: ["'self'", 'data:'],
         connectSrc: ["'self'"],
         frameAncestors: ["'none'"],
@@ -124,6 +126,9 @@ export function createApp(opts: AppOptions) {
   mountMcp(app, db, opts.mcpToken);
   mountIngest(app, db, opts.familyIngestToken);
 
+  let hqConfig: unknown = { projects: {} };
+  try { if (opts.hqConfigJson) hqConfig = JSON.parse(opts.hqConfigJson); } catch { console.error('BRAD_HQ_CONFIG_JSON is not valid JSON; using an empty project directory.'); }
+
   app.get('/api/health', (c) => c.json({ ok: true }));
 
   // ── Auth ──────────────────────────────────────────────────────
@@ -150,6 +155,7 @@ export function createApp(opts: AppOptions) {
   app.get('/api/auth/me', (c) =>
     c.json({ lens: c.var.scope.boundary, lensUntil: c.var.lensUntil, familyLensMinutes: FAMILY_LENS_MINUTES }),
   );
+  app.get('/api/hq-config', (c) => c.json(hqConfig));
 
   app.post('/api/auth/logout', (c) => {
     auth.destroySession(c.var.sessionId);

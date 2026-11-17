@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api, type GraphEdge, type GraphNode } from '../api';
 import { useWorkspaces } from '../hooks';
 import { KIND_LABEL } from '../lib/format';
+import { projectHref } from '../lib/hq';
 
 type NodeType = GraphNode['type'];
 type EdgeType = GraphEdge['type'];
@@ -136,7 +137,7 @@ export function Graph() {
 
   const open = (n: P) => {
     if (n.type === 'note') nav(`/knowledge/${n.id}`);
-    else if (n.type === 'project') nav(`/projects/${n.id}`);
+    else if (n.type === 'project') nav(projectHref(n.label, n.id));
     else if (n.type === 'workspace') nav(`/knowledge?ws=${n.id}`);
     else nav(`/knowledge?tag=${encodeURIComponent(n.label.slice(1))}`);
   };

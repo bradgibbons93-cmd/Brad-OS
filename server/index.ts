@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { openDb } from './db.ts';
 import { createApp } from './app.ts';
 import { ensureWorkspaces, seedSample } from './seed.ts';
+import { rewriteLegacyArtifactLinks } from './artifacts.ts';
 
 const isProd = process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT;
 const dataDir = resolve(process.env.DATA_DIR ?? './data');
@@ -25,9 +26,15 @@ if (!sessionSecret) sessionSecret = randomBytes(32).toString('hex');
 
 const db = openDb(join(dataDir, 'brad-os.db'));
 ensureWorkspaces(db);
+const hqConfigJson = process.env.BRAD_HQ_CONFIG_JSON || undefined;
+let artifactRoutes: Record<string, string> = {};
+try {
+  if (hqConfigJson) artifactRoutes = JSON.parse(hqConfigJson).artifactRoutes ?? {};
+} catch { /* createApp logs the invalid config and serves an empty directory. */ }
+rewriteLegacyArtifactLinks(db, artifactRoutes);
 if ((process.env.SEED_SAMPLE ?? 'true') !== 'false' && seedSample(db)) console.log('Seeded sample data.');
 
-const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined });
+const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined, hqConfigJson });
 
 const distDir = resolve('dist');
 if (existsSync(distDir)) {

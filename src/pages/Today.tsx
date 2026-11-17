@@ -9,12 +9,14 @@ import { greeting, longDate, timeAgo } from '../lib/format';
 import { plainExcerpt } from '../lib/markdown';
 import { Kbd, OriginBadge, WsDot, useUI } from '../components/ui';
 import { TaskRow } from '../components/TaskRow';
+import { projectHref } from '../lib/hq';
 
-const ENTITY_PATH: Record<string, (id: string) => string> = {
-  note: (id) => `/knowledge/${id}`,
-  project: (id) => `/projects/${id}`,
-  task: (id) => `/tasks?focus=${id}`,
-  capture: (id) => `/inbox?focus=${id}`,
+const entityPath = (type: string, id: string, title: string) => {
+  if (type === 'note') return `/knowledge/${id}`;
+  if (type === 'project') return projectHref(title, id);
+  if (type === 'task') return `/tasks?focus=${id}`;
+  if (type === 'capture') return `/inbox?focus=${id}`;
+  return '/';
 };
 
 export function Today() {
@@ -46,8 +48,8 @@ export function Today() {
       {!family && (
         <div className="worlds" aria-label="Your worlds">
           <a href="https://claude-code-auto-reply-city-ink-production.up.railway.app" target="_blank" rel="noopener noreferrer" style={{ ['--t' as string]: '#D9A94E' }}><i>🖋️</i>City Ink</a>
-          <Link to="/projects?q=runnit" style={{ ['--t' as string]: '#00E5FF' }}><i>🚀</i>Runnit</Link>
-          <Link to="/projects" style={{ ['--t' as string]: '#7A5CFF' }}><i>✕</i>Cel-X × Cyph</Link>
+          <Link to="/hq/runnit" style={{ ['--t' as string]: '#D9A94E' }}><i>🚀</i>Runnit</Link>
+          <Link to="/hq/brad-hq" style={{ ['--t' as string]: '#7A5CFF' }}><i>✕</i>Cel-X × Cyph</Link>
           <Link to="/money" style={{ ['--t' as string]: '#3DDC97' }}><i>💸</i>Money</Link>
           <a href="https://yumi-production-e794.up.railway.app" target="_blank" rel="noopener noreferrer" style={{ ['--t' as string]: '#FF6FA8' }}><i>⭐</i>Gibbons OS · Yumi</a>
         </div>
@@ -80,7 +82,7 @@ export function Today() {
               {data.activeProjects.length ? data.activeProjects.map((p) => {
                 const total = p.open_tasks + p.done_tasks;
                 return (
-                  <Link key={p.id} to={`/projects/${p.id}`} className="project-tile">
+                  <Link key={p.id} to={projectHref(p.title, p.id)} className="project-tile">
                     <div className="row small muted" style={{ gap: 6 }}><WsDot color={p.workspace_color} /> <span className="truncate">{p.workspace_name}</span></div>
                     <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{p.title}</div>
                     {p.next_action && <div className="small dim truncate">→ {p.next_action}</div>}
@@ -162,7 +164,7 @@ export function Today() {
                 {data.activity.map((a) => (
                   <div key={a.id} className="tl-item">
                     <span className="muted" style={{ flex: 'none' }}>{a.action}</span>
-                    <Link to={ENTITY_PATH[a.entity_type]?.(a.entity_id) ?? '/'} className="truncate">{a.title}</Link>
+                    <Link to={entityPath(a.entity_type, a.entity_id, a.title)} className="truncate">{a.title}</Link>
                     <span className="when">{timeAgo(a.at)}</span>
                   </div>
                 ))}
@@ -284,11 +286,11 @@ function MoneyCard() {
 
 const LAUNCH: [string, string, string][] = [
   ['💬', 'City Ink app', 'https://claude-code-auto-reply-city-ink-production.up.railway.app'],
-  ['🚀', 'Runnit HQ', 'https://claude.ai/artifact/DBEv1pxAc2jiphN1bCKLap'],
-  ['🖋️', 'Studio Links', 'https://claude.ai/artifact/HydToY6e5nPNhs78SFJcy2'],
-  ['🧪', 'SOFTR', 'https://claude.ai/artifact/Xb3JS3FL64jt79Y4V59QVS'],
+  ['🚀', 'Runnit HQ', '/hq/runnit'],
+  ['🖋️', 'Studio Links', '/hq/runnit?tab=studios'],
+  ['🧪', 'SOFTR HQ', '/hq/softr'],
   ['⭐', 'Yumi', 'https://yumi-production-e794.up.railway.app'],
-  ['📁', 'Drive', 'https://drive.google.com/drive/folders/1daZ3Zd1qt_ZH3It5CUiavejHrxJV_7at'],
+  ['📁', 'Project files', '/hq'],
   ['✉️', 'Gmail', 'https://mail.google.com/mail/u/0/#inbox'],
   ['📅', 'Calendar', 'https://calendar.google.com/calendar/r/week'],
 ];
@@ -298,7 +300,7 @@ function QuickLaunch() {
       <div className="card-head"><h2 className="h2">🚀 Quick launch</h2></div>
       <div className="apps">
         {LAUNCH.map(([ic, label, url]) => (
-          <a key={label} className="app" href={url} target="_blank" rel="noopener noreferrer"><span className="ic">{ic}</span>{label}</a>
+          url.startsWith('/') ? <Link key={label} className="app" to={url}><span className="ic">{ic}</span>{label}</Link> : <a key={label} className="app" href={url} target="_blank" rel="noopener noreferrer"><span className="ic">{ic}</span>{label}</a>
         ))}
       </div>
     </section>

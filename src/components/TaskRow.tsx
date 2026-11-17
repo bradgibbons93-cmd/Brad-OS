@@ -5,6 +5,7 @@ import { api, parseLinks, type Task, type TaskStatus } from '../api';
 import { useRefresh } from '../hooks';
 import { dueLabel } from '../lib/format';
 import { WsDot, useUI } from './ui';
+import { projectHref } from '../lib/hq';
 
 const NEXT: Record<TaskStatus, TaskStatus> = { todo: 'done', doing: 'done', done: 'todo' };
 
@@ -66,7 +67,7 @@ export function TaskRow({ task, showProject = true, editable = false, focus = fa
         {showProject && (
           <div className="small muted row" style={{ gap: 6, marginTop: 2 }}>
             <WsDot color={task.workspace_color} />
-            {task.project_id ? <Link to={`/projects/${task.project_id}`} className="truncate">{task.project_title}</Link> : <span className="truncate">{task.workspace_name}</span>}
+            {task.project_id ? <Link to={projectHref(task.project_title ?? '', task.project_id)} className="truncate">{task.project_title}</Link> : <span className="truncate">{task.workspace_name}</span>}
           </div>
         )}
       </div>

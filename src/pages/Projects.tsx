@@ -8,6 +8,7 @@ import { timeAgo } from '../lib/format';
 import { plainExcerpt } from '../lib/markdown';
 import { Dialog, Empty, OriginBadge, WsDot, useUI } from '../components/ui';
 import { TaskRow } from '../components/TaskRow';
+import { projectHref } from '../lib/hq';
 
 const STATUS_LABEL: Record<ProjectStatus, string> = { planning: 'Planning', active: 'Active', paused: 'Paused', done: 'Done' };
 
@@ -57,7 +58,7 @@ function ProjectCard({ p }: { p: Project }) {
   const people = parseList(p.people);
   const links = parseLinks(p.links);
   return (
-    <article className="project-card" onClick={(e) => !(e.target as HTMLElement).closest('a') && nav(`/projects/${p.id}`)} style={{ cursor: 'pointer' }}>
+    <article className="project-card" onClick={(e) => !(e.target as HTMLElement).closest('a') && nav(projectHref(p.title, p.id))} style={{ cursor: 'pointer' }}>
       <div className="row small muted" style={{ gap: 6 }}>
         <WsDot color={p.workspace_color} /> <span className="truncate">{p.workspace_name}</span>
         <span className="spacer" />
@@ -99,7 +100,7 @@ function NewProjectDialog({ onClose }: { onClose: () => void }) {
       const p = await api.createProject({ workspaceId: wsId, title, summary, nextAction: next, status });
       rememberWorkspace(wsId);
       refresh();
-      nav(`/projects/${p.id}`);
+      nav(projectHref(p.title, p.id));
     } catch (err) {
       ui.toast((err as Error).message, { tone: 'error' });
       setBusy(false);

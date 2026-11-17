@@ -15,6 +15,7 @@ import { Search } from './pages/Search';
 import { Settings } from './pages/Settings';
 import { Graph } from './pages/Graph';
 import { Money } from './pages/Money';
+import { HQ, HqCatalog } from './pages/HQ';
 
 export function App() {
   const qc = useQueryClient();
@@ -42,6 +43,8 @@ export function App() {
           <Route path="/knowledge/:id" element={<Knowledge />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
+          <Route path="/hq" element={<HqCatalog />} />
+          <Route path="/hq/:slug/*" element={<HQ />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/search" element={<Search />} />
           <Route path="/graph" element={<Graph />} />

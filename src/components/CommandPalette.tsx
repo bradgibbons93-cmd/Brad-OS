@@ -5,6 +5,7 @@ import { CheckSquare, FileText, FolderKanban, Home, Inbox, Library, Plus, Search
 import { api, type SearchHit } from '../api';
 import { useWorkspaces } from '../hooks';
 import { Dialog, Kbd, Snippet, WsDot, useUI } from './ui';
+import { projectHref } from '../lib/hq';
 
 interface Item {
   key: string;
@@ -17,9 +18,9 @@ interface Item {
   run: () => void;
 }
 
-export function hitPath(h: Pick<SearchHit, 'type' | 'id'>) {
+export function hitPath(h: Pick<SearchHit, 'type' | 'id' | 'title'>) {
   if (h.type === 'note') return `/knowledge/${h.id}`;
-  if (h.type === 'project') return `/projects/${h.id}`;
+  if (h.type === 'project') return projectHref(h.title, h.id);
   if (h.type === 'task') return `/tasks?focus=${h.id}`;
   return `/inbox?focus=${h.id}`;
 }
