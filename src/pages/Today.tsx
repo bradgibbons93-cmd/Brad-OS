@@ -9,7 +9,7 @@ import { greeting, longDate, timeAgo } from '../lib/format';
 import { plainExcerpt } from '../lib/markdown';
 import { Kbd, OriginBadge, WsDot, useUI } from '../components/ui';
 import { TaskRow } from '../components/TaskRow';
-import { projectHref } from '../lib/hq';
+import { projectHref, projectHq } from '../lib/hq';
 
 const entityPath = (type: string, id: string, title: string) => {
   if (type === 'note') return `/knowledge/${id}`;
@@ -22,6 +22,7 @@ const entityPath = (type: string, id: string, title: string) => {
 export function Today() {
   const { data, isLoading } = useQuery({ queryKey: ['today'], queryFn: api.today });
   const { data: me } = useMe();
+  const { data: hq } = useQuery({ queryKey: ['hq-config', me?.lens], queryFn: api.hqConfig });
   const family = me?.lens === 'family';
 
   if (isLoading || !data) return <div className="page"><div className="muted">Loading…</div></div>;
@@ -29,7 +30,7 @@ export function Today() {
 
   return (
     <div className="page">
-      <div className="hq-hero">
+      <div className="today-hero">
         <div>
           <div className="eyebrow">{family ? 'Gibbons Crew · Family space' : 'Cel-X Group · Brad HQ'}</div>
           <h1 className="display" style={{ marginTop: 12 }}>
@@ -81,8 +82,10 @@ export function Today() {
             <div className="card-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 10, padding: '4px 16px 16px' }}>
               {data.activeProjects.length ? data.activeProjects.map((p) => {
                 const total = p.open_tasks + p.done_tasks;
+                const logo = hq?.projects[(projectHq(p.title) ?? '').split('/').pop() ?? '']?.logoPreview;
                 return (
-                  <Link key={p.id} to={projectHref(p.title, p.id)} className="project-tile">
+                  <Link key={p.id} to={projectHref(p.title, p.id)} className="project-tile glass-panel">
+                    {logo && <div className="project-logo-preview"><img src={logo} alt={`${p.title} logo`} /></div>}
                     <div className="row small muted" style={{ gap: 6 }}><WsDot color={p.workspace_color} /> <span className="truncate">{p.workspace_name}</span></div>
                     <div style={{ fontFamily: 'var(--serif)', fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{p.title}</div>
                     {p.next_action && <div className="small dim truncate">→ {p.next_action}</div>}

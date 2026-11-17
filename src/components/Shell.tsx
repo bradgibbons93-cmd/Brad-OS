@@ -143,7 +143,8 @@ export function Shell({ children }: { children: ReactNode }) {
           <NavItem to="/" end icon={Home} label="Today" />
           <NavItem to="/inbox" icon={Inbox} label="Inbox" count={inboxCount} />
           <NavItem to="/knowledge" icon={Library} label="Knowledge" />
- <NavItem to="/projects" icon={FolderKanban} label="Projects" />
+          <NavItem to="/hq" icon={Briefcase} label="Project HQs" />
+          <NavItem to="/projects" icon={FolderKanban} label="Projects" />
           <NavItem to="/tasks" icon={CheckSquare} label="Tasks" />
           <NavItem to="/money" icon={Wallet} label="Money" />
           <NavItem to="/graph" icon={Network} label="Graph" />
