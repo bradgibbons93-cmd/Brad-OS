@@ -31,8 +31,8 @@ let artifactRoutes: Record<string, string> = {};
 try {
   if (hqConfigJson) artifactRoutes = JSON.parse(hqConfigJson).artifactRoutes ?? {};
 } catch { /* createApp logs the invalid config and serves an empty directory. */ }
-rewriteLegacyArtifactLinks(db, artifactRoutes);
 if ((process.env.SEED_SAMPLE ?? 'true') !== 'false' && seedSample(db)) console.log('Seeded sample data.');
+rewriteLegacyArtifactLinks(db, artifactRoutes);
 
 const app = createApp({ db, password, sessionSecret, secureCookies: isProd, mcpToken: process.env.MCP_TOKEN || undefined, familyIngestToken: process.env.FAMILY_INGEST_TOKEN || undefined, hqConfigJson });
 
