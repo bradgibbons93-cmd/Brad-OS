@@ -9,6 +9,7 @@ const part = /^[a-zA-Z0-9_-]{1,100}$/;
 const allowed = new Set(['.html','.css','.js','.json','.webp','.png','.jpg','.jpeg','.gif','.svg','.mp4','.webm','.woff','.woff2','.pdf','.txt','.md']);
 const manifestSchema = z.object({
   title: z.string().max(200),
+  logoPath: z.string().max(300).optional(),
   assets: z.array(z.object({path:z.string().max(300),name:z.string().max(300),category:z.string().max(100),type:z.enum(['image','video','document']),note:z.string().max(2000).default(''),launchPick:z.boolean().optional()})).max(500).default([]),
   launch: z.object({statement:z.string().max(1000),description:z.string().max(3000),caption:z.string().max(5000),guardrail:z.string().max(2000),steps:z.array(z.object({eyebrow:z.string().max(200),title:z.string().max(300),text:z.string().max(3000),assetPath:z.string().max(300).optional(),caption:z.string().max(5000).optional()})).max(30)}).optional(),
 });
@@ -39,6 +40,7 @@ export class HqFiles {
     if(!files['manifest.json']||!files['index.html'])throw new Error('Archive needs index.html and manifest.json');
     const manifest=manifestSchema.parse(JSON.parse(new TextDecoder().decode(files['manifest.json'])));
     for(const a of manifest.assets)if(!safePath(a.path)||!files[a.path])throw new Error('An asset is missing from the archive');
+    if(manifest.logoPath && (!safePath(manifest.logoPath)||!files[manifest.logoPath]||!['.png','.jpg','.jpeg','.webp','.svg'].includes(extname(manifest.logoPath).toLowerCase())))throw new Error('The project preview is missing or invalid');
     files['manifest.json']=new TextEncoder().encode(JSON.stringify({...manifest,importedAt:new Date().toISOString()}));
     const parent=join(this.root,slug);mkdirSync(parent,{recursive:true});
     const temp=join(parent,'.incoming-'+randomBytes(8).toString('hex')),dest=join(parent,section),backup=join(parent,'.previous-'+section);
@@ -57,6 +59,7 @@ export class HqFiles {
         try {const m=manifestSchema.parse(JSON.parse(readFileSync(join(dir,section,'manifest.json'),'utf8')));const prefix=`/api/hq-files/${slug}/${section}/`;
           project.archivePages.push({title:m.title,url:prefix+'index.html',section});
           if(slug==='runnit' && existsSync(join(dir,section,'p/runnit-wordmark.png')))project.logoPreview=prefix+'p/runnit-wordmark.png';
+          if(m.logoPath && safePath(m.logoPath))project.logoPreview=prefix+m.logoPath;
           const assets=m.assets.map(a=>({key:section+'/'+a.path,name:a.name,type:a.type,category:a.category,status:'Stored on Railway',note:a.note,url:prefix+a.path,thumbnailUrl:a.type==='image'?prefix+a.path:undefined,previewUrl:a.type==='video'?prefix+a.path:undefined,launchPick:a.launchPick}));
           if(m.launch){project.launch={...m.launch,steps:m.launch.steps.map(s=>({...s,assetUrl:s.assetPath && safePath(s.assetPath)?prefix+s.assetPath:undefined}))};project.assets.forEach(a=>{a.launchPick=false;});}
           const names=new Set(assets.map(a=>a.name.toLowerCase().replace(/[^a-z0-9]/g,'')));

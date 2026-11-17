@@ -13,7 +13,7 @@ const root=()=>{const p=mkdtempSync(join(tmpdir(),'hq-'));roots.push(p);return p
 afterEach(()=>roots.splice(0).forEach(p=>rmSync(p,{recursive:true,force:true})));
 const project=(boundary:'work'|'family')=>({slug:boundary,title:boundary,eyebrow:'',summary:'',subtitle:'',accent:'#fff',status:'',boundary,links:[],assets:[]});
 const config:HqConfig={projects:{work:project('work'),family:project('family')}};
-const pack=(extra:Record<string,Uint8Array>={})=>zipSync({'index.html':strToU8('<h1>Source</h1>'),'manifest.json':strToU8(JSON.stringify({title:'Source',assets:[{path:'img/a.png',name:'A',category:'Campaign',type:'image'}]})),'img/a.png':new Uint8Array([1,2,3]),'clip.mp4':new Uint8Array([0,1,2,3,4,5]),...extra});
+const pack=(extra:Record<string,Uint8Array>={})=>zipSync({'index.html':strToU8('<h1>Source</h1>'),'manifest.json':strToU8(JSON.stringify({title:'Source',logoPath:'img/a.png',assets:[{path:'img/a.png',name:'A',category:'Campaign',type:'image'}]})),'img/a.png':new Uint8Array([1,2,3]),'clip.mp4':new Uint8Array([0,1,2,3,4,5]),...extra});
 const stream=(b:Uint8Array)=>new ReadableStream<Uint8Array>({start(c){c.enqueue(b);c.close();}});
 describe('private HQ archives',()=>{
  it('scopes import grants to one destination and consumes them after use',async()=>{
@@ -23,6 +23,7 @@ describe('private HQ archives',()=>{
   expect((await store.import(token,'work','library',stream(pack()))).assets).toBe(1);
   expect(store.grant(token,'work','library')).toBeNull();
   expect(store.config(config,'work').projects.work.assets[0].url).toBe('/api/hq-files/work/library/img/a.png');
+  expect(store.config(config,'work').projects.work.logoPreview).toBe('/api/hq-files/work/library/img/a.png');
   expect(store.file('work','library','../manifest.json')).toBeNull();
  });
  it('rejects zip traversal and absent asset bytes',async()=>{
